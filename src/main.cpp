@@ -11,13 +11,25 @@
 const int WIDTH  = 800;
 const int HEIGHT = 600;
 
-const std::vector<const char*> g_validationLayers = {"VK_LAYER_KHRONOS_validation"};
+const std::vector<const char*> g_validationLayers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
+
+bool isDeviceSuitable(VkPhysicalDevice device)
+{
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
+
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+           deviceFeatures.geometryShader;
+}
 
 class HelloTriangleApplication
 {
@@ -41,7 +53,11 @@ class HelloTriangleApplication
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
-    void initVulkan() { createInstance(); }
+    void initVulkan()
+    {
+        createInstance();
+        pickPhysicalDevice();
+    }
 
     void createInstance()
     {
@@ -68,8 +84,12 @@ class HelloTriangleApplication
         createInfo.pApplicationInfo        = &appInfo;
         createInfo.enabledExtensionCount   = glfwExtensionsCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
-        createInfo.enabledLayerCount       = 0;
-
+        if (enableValidationLayers) {
+            createInfo.enabledLayerCount   = g_validationLayers.size();
+            createInfo.ppEnabledLayerNames = g_validationLayers.data();
+        } else {
+            createInfo.enabledLayerCount = 0;
+        }
         if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
             throw std::runtime_error{"failed to create instance!"};
     }
@@ -109,6 +129,25 @@ class HelloTriangleApplication
         return true;
     }
 
+    void pickPhysicalDevice()
+    {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+
+        if (deviceCount == 0) throw std::runtime_error{"failed to find GPUs with Vulkan support!"};
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+
+        auto it = std::find_if(devices.cbegin(), devices.cend(), isDeviceSuitable);
+
+        if (it != devices.cend()) {
+            m_physicalDevice = *it;
+        } else {
+            throw std::runtime_error{"failed to find a suitable GPU!"};
+        }
+    }
+
     void mainLoop()
     {
         while (!glfwWindowShouldClose(m_window)) {
@@ -125,6 +164,7 @@ class HelloTriangleApplication
 
     GLFWwindow* m_window = nullptr;
     VkInstance m_instance;
+    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE; // Destoryed with instance
 };
 
 int main()
