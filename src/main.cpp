@@ -1,3 +1,6 @@
+#include <bits/stdint-uintn.h>
+#include <iterator>
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -19,16 +22,38 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+struct QueueFamiliIndices
+{
+    std::optional<uint32_t> graphicsFamily;
+
+    bool isComplete() { return graphicsFamily.has_value(); }
+};
+
+QueueFamiliIndices findQueueFamilies(VkPhysicalDevice device)
+{
+    QueueFamiliIndices indices;
+
+    uint32_t queueFamilyCount;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+    for (auto it = queueFamilies.cbegin(); it != queueFamilies.cend(); ++it) {
+        if (it->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            indices.graphicsFamily = std::distance(queueFamilies.cbegin(), it);
+
+        if (indices.isComplete()) break;
+    }
+
+    return indices;
+}
+
 bool isDeviceSuitable(VkPhysicalDevice device)
 {
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
+    QueueFamiliIndices indices = findQueueFamilies(device);
 
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
-    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-           deviceFeatures.geometryShader;
+    return indices.isComplete();
 }
 
 class HelloTriangleApplication
@@ -164,7 +189,7 @@ class HelloTriangleApplication
 
     GLFWwindow* m_window = nullptr;
     VkInstance m_instance;
-    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE; // Destoryed with instance
+    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE; // Destroyed with instance
 };
 
 int main()
