@@ -1,5 +1,6 @@
 #include <bits/stdint-uintn.h>
 #include <iterator>
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -82,6 +83,7 @@ class HelloTriangleApplication
     {
         createInstance();
         pickPhysicalDevice();
+        createLogicalDevice();
     }
 
     void createInstance()
@@ -173,6 +175,33 @@ class HelloTriangleApplication
         }
     }
 
+    void createLogicalDevice()
+    {
+        QueueFamiliIndices indices = findQueueFamilies(m_physicalDevice);
+
+        VkDeviceQueueCreateInfo queueCreateInfo = {};
+        queueCreateInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex        = indices.graphicsFamily.value();
+        queueCreateInfo.queueCount              = 1;
+        float queuePriority                     = 1.0f;
+        queueCreateInfo.pQueuePriorities        = &queuePriority;
+
+        VkPhysicalDeviceFeatures deviceFeatures = {};
+
+        VkDeviceCreateInfo createInfo    = {};
+        createInfo.sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.pQueueCreateInfos     = &queueCreateInfo;
+        createInfo.queueCreateInfoCount  = 1;
+        createInfo.pEnabledFeatures      = &deviceFeatures;
+        createInfo.enabledExtensionCount = 0;
+        createInfo.enabledLayerCount     = 0;
+
+        if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
+            throw std::runtime_error{"failed to create logical device!"};
+
+        vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
+    }
+
     void mainLoop()
     {
         while (!glfwWindowShouldClose(m_window)) {
@@ -182,6 +211,7 @@ class HelloTriangleApplication
 
     void cleanup()
     {
+        vkDestroyDevice(m_device, nullptr);
         vkDestroyInstance(m_instance, nullptr);
         glfwDestroyWindow(m_window);
         glfwTerminate();
@@ -190,6 +220,8 @@ class HelloTriangleApplication
     GLFWwindow* m_window = nullptr;
     VkInstance m_instance;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE; // Destroyed with instance
+    VkDevice m_device;
+    VkQueue m_graphicsQueue;
 };
 
 int main()
