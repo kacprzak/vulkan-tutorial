@@ -1,0 +1,2 @@
+((nil . ((projectile-project-compilation-cmd . "cmake --build @CMAKE_BINARY_DIR@")
+         (projectile-project-run-cmd . "@CMAKE_BINARY_DIR@/@PROJECT_NAME@"))))
