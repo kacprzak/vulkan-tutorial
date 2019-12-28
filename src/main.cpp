@@ -1,3 +1,5 @@
+#include <bits/stdint-uintn.h>
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -12,6 +14,7 @@
 const int WIDTH  = 800;
 const int HEIGHT = 600;
 
+const std::vector<const char*> g_deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> g_validationLayers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifdef NDEBUG
@@ -51,6 +54,39 @@ QueueFamiliIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
     }
 
     return indices;
+}
+
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
+SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+{
+    SwapChainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentCount, nullptr);
+
+    if (presentCount != 0) {
+        details.presentModes.resize(presentCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentCount,
+                                                  details.presentModes.data());
+    }
+
+    return details;
 }
 
 //------------------------------------------------------------------------------
@@ -185,7 +221,33 @@ class HelloTriangleApplication
     {
         QueueFamiliIndices indices = findQueueFamilies(device, m_surface);
 
-        return indices.isComplete();
+        bool extensionsSupported = checkDeviceExtensionSupport(device);
+        bool swapChainAdequate   = false;
+        if (extensionsSupported) {
+            auto swapChainSupport = querySwapChainSupport(device, m_surface);
+            swapChainAdequate =
+                !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        }
+
+        return indices.isComplete() && extensionsSupported && swapChainAdequate;
+    }
+
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device)
+    {
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+                                             availableExtensions.data());
+
+        std::set<std::string> requiredExtensions(g_deviceExtensions.cbegin(),
+                                                 g_deviceExtensions.cend());
+
+        for (const auto& extension : availableExtensions) {
+            requiredExtensions.erase(extension.extensionName);
+        }
+
+        return requiredExtensions.empty();
     }
 
     void createLogicalDevice()
@@ -208,13 +270,14 @@ class HelloTriangleApplication
 
         VkPhysicalDeviceFeatures deviceFeatures = {};
 
-        VkDeviceCreateInfo createInfo    = {};
-        createInfo.sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pQueueCreateInfos     = queueCreateInfos.data();
-        createInfo.queueCreateInfoCount  = queueCreateInfos.size();
-        createInfo.pEnabledFeatures      = &deviceFeatures;
-        createInfo.enabledExtensionCount = 0;
-        createInfo.enabledLayerCount     = 0;
+        VkDeviceCreateInfo createInfo      = {};
+        createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.pQueueCreateInfos       = queueCreateInfos.data();
+        createInfo.queueCreateInfoCount    = queueCreateInfos.size();
+        createInfo.pEnabledFeatures        = &deviceFeatures;
+        createInfo.ppEnabledExtensionNames = g_deviceExtensions.data();
+        createInfo.enabledExtensionCount   = g_deviceExtensions.size();
+        createInfo.enabledLayerCount       = 0;
 
         if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
             throw std::runtime_error{"failed to create logical device!"};
