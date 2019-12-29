@@ -4,3 +4,4 @@ release/
 .clangd/
 compile_commands.json
 .dir-locals.el
+*.spv
