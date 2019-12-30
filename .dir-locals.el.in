@@ -1,8 +1,8 @@
 ((nil . ((projectile-project-compilation-cmd . "cmake --build @CMAKE_BINARY_DIR@")
-         (projectile-project-run-cmd . "@CMAKE_BINARY_DIR@/@PROJECT_NAME@")
+         (projectile-project-run-cmd . "cd @CMAKE_BINARY_DIR@ && ./@PROJECT_NAME@")
          (eval . (dap-register-debug-template "LLDB::Run @PROJECT_NAME@"
                                               (list :type "lldb"
-                                                    :cwd "@CMAKE_SOURCE_DIR@"
+                                                    :cwd "@CMAKE_BINARY_DIR@"
                                                     :request "launch"
                                                     :program "@CMAKE_BINARY_DIR@/@PROJECT_NAME@"
                                                     :name "LLDB::Run @PROJECT_NAME@"))))))

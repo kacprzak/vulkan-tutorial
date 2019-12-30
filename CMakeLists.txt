@@ -9,6 +9,7 @@ find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(src)
+add_subdirectory(shaders)
 
 # For clangd support
 if(UNIX)
