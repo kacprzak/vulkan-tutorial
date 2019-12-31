@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -192,6 +193,7 @@ class HelloTriangleApplication
         createImageViews();
         createRenderPass();
         createGraphicsPipeline();
+        createFramebuffers();
     }
 
     void createInstance()
@@ -608,6 +610,27 @@ class HelloTriangleApplication
         return shaderModule;
     }
 
+    void createFramebuffers()
+    {
+        m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
+        for (size_t i = 0; i < m_swapChainImageViews.size(); ++i) {
+            VkImageView attachments[] = {m_swapChainImageViews[i]};
+
+            VkFramebufferCreateInfo framebufferInfo = {};
+            framebufferInfo.sType                   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass              = m_renderPass;
+            framebufferInfo.attachmentCount         = 1;
+            framebufferInfo.pAttachments            = attachments;
+            framebufferInfo.width                   = m_swapChainExtent.width;
+            framebufferInfo.height                  = m_swapChainExtent.height;
+            framebufferInfo.layers                  = 1;
+
+            if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr,
+                                    &m_swapChainFramebuffers[i]))
+                throw std::runtime_error{"failed to create frambuffer!"};
+        }
+    }
+
     void mainLoop()
     {
         while (!glfwWindowShouldClose(m_window)) {
@@ -617,6 +640,10 @@ class HelloTriangleApplication
 
     void cleanup()
     {
+        for (auto framebuffer : m_swapChainFramebuffers) {
+            vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+        }
+
         vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
         vkDestroyRenderPass(m_device, m_renderPass, nullptr);
@@ -648,6 +675,7 @@ class HelloTriangleApplication
     VkRenderPass m_renderPass;
     VkPipelineLayout m_pipelineLayout;
     VkPipeline m_graphicsPipeline;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
 };
 
 int main()
