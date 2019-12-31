@@ -194,6 +194,7 @@ class HelloTriangleApplication
         createRenderPass();
         createGraphicsPipeline();
         createFramebuffers();
+        createCommandPool();
     }
 
     void createInstance()
@@ -631,6 +632,19 @@ class HelloTriangleApplication
         }
     }
 
+    void createCommandPool()
+    {
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_physicalDevice, m_surface);
+
+        VkCommandPoolCreateInfo poolInfo = {};
+        poolInfo.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex        = queueFamilyIndices.graphicsFamily.value();
+        poolInfo.flags                   = 0; // Optional
+
+        if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
+            throw std::runtime_error("failed to create command pool!");
+    }
+
     void mainLoop()
     {
         while (!glfwWindowShouldClose(m_window)) {
@@ -640,6 +654,8 @@ class HelloTriangleApplication
 
     void cleanup()
     {
+        vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+
         for (auto framebuffer : m_swapChainFramebuffers) {
             vkDestroyFramebuffer(m_device, framebuffer, nullptr);
         }
@@ -676,6 +692,7 @@ class HelloTriangleApplication
     VkPipelineLayout m_pipelineLayout;
     VkPipeline m_graphicsPipeline;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    VkCommandPool m_commandPool;
 };
 
 int main()
