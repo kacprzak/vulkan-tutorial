@@ -5,8 +5,8 @@ find_program(
   DOC "GLSL compiler"
   )
 
-set(CMAKE_FOO_SOURCE_FILE_EXTENSIONS vert;frag;geom;tesc;tese;comp)
-set(CMAKE_FOO_OUTPUT_EXTENSION .spv)
+set(CMAKE_GLSL_SOURCE_FILE_EXTENSIONS vert;frag;geom;tesc;tese;comp)
+set(CMAKE_GLSL_OUTPUT_EXTENSION .spv)
 
 function(add_spirv_shader OUTPUT_FILE INPUT_FILE)
   add_custom_command(
