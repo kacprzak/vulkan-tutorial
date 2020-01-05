@@ -1,3 +1,4 @@
+#include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -196,6 +197,7 @@ class HelloTriangleApplication
         createFramebuffers();
         createCommandPool();
         createCommandBuffers();
+        createSemaphores();
     }
 
     void createInstance()
@@ -465,12 +467,23 @@ class HelloTriangleApplication
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments    = &colorAttachmentRef;
 
+        VkSubpassDependency dependency = {};
+        dependency.srcSubpass          = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass          = 0;
+        dependency.srcStageMask        = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask       = 0;
+        dependency.dstStageMask        = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask =
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
         VkRenderPassCreateInfo renderPassInfo = {};
         renderPassInfo.sType                  = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount        = 1;
         renderPassInfo.pAttachments           = &colorAttachment;
         renderPassInfo.subpassCount           = 1;
         renderPassInfo.pSubpasses             = &subpass;
+        renderPassInfo.dependencyCount        = 1;
+        renderPassInfo.pDependencies          = &dependency;
 
         if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
             throw std::runtime_error{"failed to create render pass!"};
@@ -643,7 +656,7 @@ class HelloTriangleApplication
         poolInfo.flags                   = 0; // Optional
 
         if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
-            throw std::runtime_error("failed to create command pool!");
+            throw std::runtime_error{"failed to create command pool!"};
     }
 
     void createCommandBuffers()
@@ -666,7 +679,7 @@ class HelloTriangleApplication
             beginInfo.pInheritanceInfo         = nullptr; // Optional
 
             if (vkBeginCommandBuffer(m_commandBuffers[i], &beginInfo) != VK_SUCCESS)
-                throw std::runtime_error("failed to begin recording command buffer!");
+                throw std::runtime_error{"failed to begin recording command buffer!"};
 
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType                 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -687,8 +700,21 @@ class HelloTriangleApplication
             vkCmdEndRenderPass(m_commandBuffers[i]);
 
             if (vkEndCommandBuffer(m_commandBuffers[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to record command buffer!");
+                throw std::runtime_error{"failed to record command buffer!"};
             }
+        }
+    }
+
+    void createSemaphores()
+    {
+        VkSemaphoreCreateInfo semaphoreInfo = {};
+        semaphoreInfo.sType                 = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) !=
+                VK_SUCCESS ||
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) !=
+                VK_SUCCESS) {
+            throw std::runtime_error{"failed to create semaphores!"};
         }
     }
 
@@ -696,11 +722,57 @@ class HelloTriangleApplication
     {
         while (!glfwWindowShouldClose(m_window)) {
             glfwPollEvents();
+            drawFrame();
         }
+
+        vkDeviceWaitIdle(m_device);
+    }
+
+    void drawFrame()
+    {
+        uint32_t imageIndex;
+        vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphore,
+                              VK_NULL_HANDLE, &imageIndex);
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType        = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphores[]      = {m_imageAvailableSemaphore};
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores    = waitSemaphores;
+        submitInfo.pWaitDstStageMask  = waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &m_commandBuffers[imageIndex];
+
+        VkSemaphore signalSemaphores[]  = {m_renderFinishedSemaphore};
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores    = signalSemaphores;
+
+        if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+            throw std::runtime_error{"failed to submit draw command buffer!"};
+        }
+
+        VkPresentInfoKHR presentInfo = {};
+        presentInfo.sType            = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores    = signalSemaphores;
+
+        VkSwapchainKHR swapChains[] = {m_swapChain};
+        presentInfo.swapchainCount  = 1;
+        presentInfo.pSwapchains     = swapChains;
+        presentInfo.pImageIndices   = &imageIndex;
+        presentInfo.pResults        = nullptr; // Optional
+
+        vkQueuePresentKHR(m_presentQueue, &presentInfo);
     }
 
     void cleanup()
     {
+        vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
+        vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
         vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
         for (auto framebuffer : m_swapChainFramebuffers) {
@@ -741,6 +813,8 @@ class HelloTriangleApplication
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers; // Destroyed with commandPool
+    VkSemaphore m_imageAvailableSemaphore;
+    VkSemaphore m_renderFinishedSemaphore;
 };
 
 int main()
