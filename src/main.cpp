@@ -574,9 +574,9 @@ class HelloTriangleApplication
         VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
 
         VkPipelineDynamicStateCreateInfo dynamicState = {};
-        dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicState.dynamicStateCount = 2;
-        dynamicState.pDynamicStates    = dynamicStates;
+        dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        // dynamicState.dynamicStateCount = 2;
+        // dynamicState.pDynamicStates    = dynamicStates;
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -767,6 +767,8 @@ class HelloTriangleApplication
         presentInfo.pResults        = nullptr; // Optional
 
         vkQueuePresentKHR(m_presentQueue, &presentInfo);
+
+        vkQueueWaitIdle(m_presentQueue);
     }
 
     void cleanup()
