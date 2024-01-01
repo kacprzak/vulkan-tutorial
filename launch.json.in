@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB::Run @PROJECT_NAME@",
+            "type": "lldb-vscode",
+            "request": "launch",
+            "cwd": "@CMAKE_BINARY_DIR@",
+            "program": "@CMAKE_BINARY_DIR@/@PROJECT_NAME@"
+        }
+    ]
+}

@@ -17,4 +17,4 @@ if(UNIX)
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
-configure_file(.dir-locals.el.in ${CMAKE_SOURCE_DIR}/.dir-locals.el)
+configure_file(launch.json.in ${CMAKE_SOURCE_DIR}/launch.json)
