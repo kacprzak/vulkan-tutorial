@@ -2,6 +2,7 @@ build/
 debug/
 release/
 .clangd/
+.cache/
 compile_commands.json
 .dir-locals.el
 launch.json
