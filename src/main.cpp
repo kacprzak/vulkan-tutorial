@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <array>
 #include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <cstdint>
@@ -11,11 +12,10 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <vector>
-#include <optional>
-#include <array>
 
 const std::vector<const char*> g_deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> g_validationLayers = {"VK_LAYER_KHRONOS_validation"};
