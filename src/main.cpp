@@ -14,9 +14,11 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+#include <optional>
+#include <array>
 
 const std::vector<const char*> g_deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-const std::vector<const char*> g_validationLayers = {"VK_LAYER_LUNARG_standard_validation"};
+const std::vector<const char*> g_validationLayers = {"VK_LAYER_KHRONOS_validation"};
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
